@@ -1,12 +1,14 @@
 import argparse
 import random
-from TextCNN.text_cnn import TextCNN
+
+from HierarchicalAttentionNetwork.hierarchical_attention_network import HierarchicalAttentionNetwork
 from util.news_data_util import *
 from tensorflow.keras.preprocessing import sequence
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.utils import to_categorical
 import logging
+
 logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
@@ -15,7 +17,8 @@ if __name__ == '__main__':
     parser.add_argument("--vocab_file", type=str, default="../data/vocab/vocab.txt", help="vocab_file")
     parser.add_argument("--vocab_size", type=int, default="40000", help="vocab_size")
     parser.add_argument("--max_features", type=int, default=40001, help="max_features")
-    parser.add_argument("--max_len", type=int, default=100, help="max_len")
+    parser.add_argument("--max_len_word", type=int, default=25, help="max_len_word")
+    parser.add_argument("--max_len_sentence", type=int, default=16, help="max_len_sentence")
     parser.add_argument("--batch_size", type=int, default=64, help="batch_size")
     parser.add_argument("--embedding_size", type=int, default=50, help="embedding_size")
     parser.add_argument("--epochs", type=int, default=3, help="epochs")
@@ -40,14 +43,16 @@ if __name__ == '__main__':
     data_test = encode_sentences([content[0] for content in test_data], word_to_id)
     label_test = to_categorical(encode_cate([content[1] for content in test_data], cat_to_id))
 
-    data_train = sequence.pad_sequences(data_train, maxlen=args.max_len)
-    data_test = sequence.pad_sequences(data_test, maxlen=args.max_len)
+    data_train = sequence.pad_sequences(data_train, maxlen=args.max_len_sentence * args.max_len_word)
+    data_test = sequence.pad_sequences(data_test, maxlen=args.max_len_sentence * args.max_len_word)
+    data_train = data_train.reshape((len(data_train), args.max_len_sentence, args.max_len_word))
+    data_test = data_test.reshape((len(data_test), args.max_len_sentence, args.max_len_word))
 
-    model = TextCNN(args.max_len, args.max_features, args.embedding_size).build_model()
+    model = HierarchicalAttentionNetwork(args.max_len_sentence, args.max_len_word, args.max_features, args.embedding_size).build_model()
     model.compile('adam', 'categorical_crossentropy', metrics=['accuracy'])
 
     logger.info('开始训练...')
-    cnn_callbacks = [
+    callbacks = [
         ModelCheckpoint('./model.h5', verbose=1),
         EarlyStopping(monitor='val_accuracy', patience=2, mode='max')
     ]
@@ -55,5 +60,7 @@ if __name__ == '__main__':
     history = model.fit(data_train, label_train,
                         batch_size=args.batch_size,
                         epochs=args.epochs,
-                        callbacks=cnn_callbacks,
+                        callbacks=callbacks,
                         validation_data=(data_test, label_test))
+
+    result = model.predict(data_test)

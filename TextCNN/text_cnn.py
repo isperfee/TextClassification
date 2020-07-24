@@ -12,7 +12,7 @@ class TextCNN(object):
         self.class_num = class_num
         self.activation = activation
 
-    def get_model(self):
+    def build_model(self):
         input = Input((self.max_len,))
         embedding = Embedding(self.max_features, self.embedding_dims, input_length=self.max_len)(input)
         convs = []

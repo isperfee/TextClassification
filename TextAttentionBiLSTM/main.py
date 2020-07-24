@@ -1,12 +1,14 @@
 import argparse
 import random
-from TextCNN.text_cnn import TextCNN
+
+from TextAttentionBiLSTM.text_attention_bi_lstm import TextAttentionBiLSTM
 from util.news_data_util import *
 from tensorflow.keras.preprocessing import sequence
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.utils import to_categorical
 import logging
+
 logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
@@ -43,11 +45,11 @@ if __name__ == '__main__':
     data_train = sequence.pad_sequences(data_train, maxlen=args.max_len)
     data_test = sequence.pad_sequences(data_test, maxlen=args.max_len)
 
-    model = TextCNN(args.max_len, args.max_features, args.embedding_size).build_model()
+    model = TextAttentionBiLSTM(args.max_len, args.max_features, args.embedding_size).build_model()
     model.compile('adam', 'categorical_crossentropy', metrics=['accuracy'])
 
     logger.info('开始训练...')
-    cnn_callbacks = [
+    callbacks = [
         ModelCheckpoint('./model.h5', verbose=1),
         EarlyStopping(monitor='val_accuracy', patience=2, mode='max')
     ]
@@ -55,5 +57,7 @@ if __name__ == '__main__':
     history = model.fit(data_train, label_train,
                         batch_size=args.batch_size,
                         epochs=args.epochs,
-                        callbacks=cnn_callbacks,
+                        callbacks=callbacks,
                         validation_data=(data_test, label_test))
+
+    result = model.predict(data_test)

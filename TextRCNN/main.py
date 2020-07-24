@@ -1,6 +1,6 @@
 import argparse
 import random
-from TextCNN.text_cnn import TextCNN
+from TextRCNN.text_rcnn import TextRCNN
 from util.news_data_util import *
 from tensorflow.keras.preprocessing import sequence
 from sklearn.model_selection import train_test_split
@@ -43,17 +43,27 @@ if __name__ == '__main__':
     data_train = sequence.pad_sequences(data_train, maxlen=args.max_len)
     data_test = sequence.pad_sequences(data_test, maxlen=args.max_len)
 
-    model = TextCNN(args.max_len, args.max_features, args.embedding_size).build_model()
+    data_train_current = data_train
+    data_train_left = np.hstack([np.expand_dims(data_train[:, 0], axis=1), data_train[:, 0:-1]])
+    data_train_right = np.hstack([data_train[:, 1:], np.expand_dims(data_train[:, -1], axis=1)])
+    data_test_current = data_test
+    data_test_left = np.hstack([np.expand_dims(data_test[:, 0], axis=1), data_test[:, 0:-1]])
+    data_test_right = np.hstack([data_test[:, 1:], np.expand_dims(data_test[:, -1], axis=1)])
+
+    logger.info('构建模型...')
+    model = TextRCNN(args.max_len, args.max_features, args.embedding_size).build_model()
     model.compile('adam', 'categorical_crossentropy', metrics=['accuracy'])
 
-    logger.info('开始训练...')
-    cnn_callbacks = [
+    callbacks = [
         ModelCheckpoint('./model.h5', verbose=1),
         EarlyStopping(monitor='val_accuracy', patience=2, mode='max')
     ]
 
-    history = model.fit(data_train, label_train,
+    logger.info('开始训练...')
+    history = model.fit([data_train_current, data_train_left, data_train_right], label_train,
                         batch_size=args.batch_size,
                         epochs=args.epochs,
-                        callbacks=cnn_callbacks,
-                        validation_data=(data_test, label_test))
+                        callbacks=callbacks,
+                        validation_data=([data_test_current, data_test_left, data_test_right], label_test))
+
+    result = model.predict([data_test_current, data_test_left, data_test_right])
