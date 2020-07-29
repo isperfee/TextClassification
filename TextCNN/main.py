@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.utils import to_categorical
 import logging
+from util.metrics import evaluate
 logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
@@ -18,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument("--max_len", type=int, default=100, help="max_len")
     parser.add_argument("--batch_size", type=int, default=64, help="batch_size")
     parser.add_argument("--embedding_size", type=int, default=50, help="embedding_size")
-    parser.add_argument("--epochs", type=int, default=3, help="epochs")
+    parser.add_argument("--epochs", type=int, default=1, help="epochs")
     args = parser.parse_args()
 
     logger.info('加载数据构建词汇表...')
@@ -57,3 +58,8 @@ if __name__ == '__main__':
                         epochs=args.epochs,
                         callbacks=cnn_callbacks,
                         validation_data=(data_test, label_test))
+    model.summary()
+    label_pre = model.predict(data_test)
+    pred_argmax = label_pre.argmax(-1)
+    label_test = label_test.argmax(-1)
+    print(evaluate(label_test, pred_argmax, categories))

@@ -2,6 +2,7 @@ import argparse
 import random
 
 from TextHierarchicalAttentionNetwork.hierarchical_attention_network import HierarchicalAttentionNetwork
+from util.metrics import evaluate
 from util.news_data_util import *
 from tensorflow.keras.preprocessing import sequence
 from sklearn.model_selection import train_test_split
@@ -59,8 +60,10 @@ if __name__ == '__main__':
 
     history = model.fit(data_train, label_train,
                         batch_size=args.batch_size,
-                        epochs=args.epochs,
-                        callbacks=callbacks,
-                        validation_data=(data_test, label_test))
+                        epochs=args.epochs)
 
-    result = model.predict(data_test)
+    model.summary()
+    label_pre = model.predict(data_test)
+    pred_argmax = label_pre.argmax(-1)
+    label_test = label_test.argmax(-1)
+    print(evaluate(label_test, pred_argmax, categories))
